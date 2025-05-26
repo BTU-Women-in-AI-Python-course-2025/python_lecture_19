@@ -1,10 +1,10 @@
 # Django Management Commands
 
-## 🔹 What Are Django Commands?
+## What Are Django Commands?
 
-Django provides a set of built-in **management commands** you can run from the terminal to interact with your project.
+Django provides built-in **management commands** for tasks like running the server, applying migrations, or creating users.
 
-You use them like this:
+Run them via:
 
 ```bash
 python manage.py <command> [options]
@@ -12,142 +12,115 @@ python manage.py <command> [options]
 
 ---
 
-## ✅ Most Common Commands
+## Most Common Commands
 
-| Command                 | Description                                         |
-| ----------------------- | --------------------------------------------------- |
-| `runserver`             | Starts the development server                       |
-| `migrate`               | Applies database migrations                         |
-| `makemigrations`        | Creates migration files from model changes          |
-| `createsuperuser`       | Creates an admin user                               |
-| `shell`                 | Opens a Python shell with Django context            |
-| `startapp`              | Creates a new Django app                            |
-| `startproject`          | Creates a new Django project                        |
-| `showmigrations`        | Displays all migrations and their status            |
-| `sqlmigrate`            | Shows raw SQL for a given migration                 |
-| `check`                 | Checks for problems in your project                 |
-| `collectstatic`         | Gathers all static files into one folder (for prod) |
-| `flush`                 | Resets the database                                 |
-| `loaddata` / `dumpdata` | Import/export data using fixtures                   |
+| Command                 | Description                                |
+| ----------------------- | ------------------------------------------ |
+| `runserver`             | Starts the development server              |
+| `migrate`               | Applies database migrations                |
+| `makemigrations`        | Creates migration files from model changes |
+| `createsuperuser`       | Creates an admin user                      |
+| `shell`                 | Opens an interactive Python shell          |
+| `startapp`              | Creates a new Django app                   |
+| `startproject`          | Creates a new Django project               |
+| `showmigrations`        | Shows applied and unapplied migrations     |
+| `check`                 | Validates your project setup               |
+| `flush`                 | Deletes all data from the database         |
+| `loaddata` / `dumpdata` | Import/export data as JSON fixtures        |
 
 ---
 
-## 📂 Example: Create App
+## 📂 Example: Start a New App
 
 ```bash
 python manage.py startapp blog
 ```
 
-Creates a folder structure for a new Django app named `blog`.
-
 ---
 
-## 👤 Example: Create Superuser
+## Example: Create a Superuser
 
 ```bash
 python manage.py createsuperuser
 ```
 
-You'll be prompted to enter username, email, and password.
-
 ---
 
-## 🔄 Example: Migrations
-
-```bash
-python manage.py makemigrations
-python manage.py migrate
-```
-
-First command creates migration files, second applies them to the database.
-
----
-
-## 🐚 Example: Django Shell
+## Example: Use Django Shell
 
 ```bash
 python manage.py shell
 ```
 
-You can import and play with your models:
+You can explore models interactively.
+
+---
+
+## Writing a Custom Command
+
+To create a custom command:
+
+1. Inside any app, create this structure:
+
+```
+your_app/
+└── management/
+    └── commands/
+        └── sort_products.py
+```
+
+Each folder must include `__init__.py`.
+
+---
+
+### Example: Custom Command to Sort Products
 
 ```python
-from blog.models import Post
-Post.objects.all()
-```
+# your_app/management/commands/sort_products.py
 
----
-
-## 🧪 Example: Test Database with `flush`
-
-```bash
-python manage.py flush
-```
-
-Deletes **all data** in the database and resets primary keys. Useful in development.
-
----
-
-## 🗃️ Fixtures (Backup / Load Data)
-
-```bash
-python manage.py dumpdata > data.json
-python manage.py loaddata data.json
-```
-
-Export and import data — great for saving sample data.
-
----
-
-## 🛠️ Custom Management Commands
-
-You can create your own command by placing a file in:
-
-```
-<your_app>/management/commands/say_hello.py
-```
-
-Make sure to include `__init__.py` files in both `management/` and `commands/` folders.
-
-### ✅ Example: `say_hello` Command
-
-```python
-# say_hello.py
 from django.core.management.base import BaseCommand
+from your_app.models import Product  # Replace with your actual app and model
 
 class Command(BaseCommand):
-    help = 'Greets the user with their name'
+    help = 'Sorts products by a given field and updates the "order" field sequentially'
 
     def add_arguments(self, parser):
-        parser.add_argument('name', type=str, help='Your name')
+        parser.add_argument(
+            'sort_field',
+            type=str,
+            help='Field to sort by, e.g., "-id", "title"'
+        )
 
     def handle(self, *args, **kwargs):
-        name = kwargs['name']
-        self.stdout.write(self.style.SUCCESS(f'Hello, {name}! Welcome to Django.'))
+        sort_field = kwargs['sort_field']
+        products = Product.objects.order_by(sort_field)
+
+        for index, product in enumerate(products, start=1):
+            product.order = index
+            product.save(update_fields=['order'])
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Updated order for {products.count()} products"
+        ))
 ```
 
-### ▶️ Run the Command
+---
+
+### ▶️ Run It
 
 ```bash
-python manage.py say_hello Mariam
+python manage.py sort_products -id
 ```
 
-### ✅ Output
-
-```
-Hello, Mariam! Welcome to Django.
-```
+Sorts products by descending ID and updates their `order` field.
 
 ---
 
 ## 🧠 Summary
 
-| Category       | Example Command                         |
-| -------------- | --------------------------------------- |
-| Server         | `runserver`                             |
-| Database       | `makemigrations`, `migrate`, `flush`    |
-| Admin & Shell  | `createsuperuser`, `shell`              |
-| App Management | `startapp`, `startproject`              |
-| Data           | `loaddata`, `dumpdata`                  |
-| Debugging      | `check`, `showmigrations`, `sqlmigrate` |
-| Custom         | Create under `management/commands/`     |
+| Use Case        | Command/Example                      |
+| --------------- | ------------------------------------ |
+| Run server      | `python manage.py runserver`         |
+| Migrations      | `makemigrations`, `migrate`          |
+| Data management | `dumpdata`, `loaddata`, `flush`      |
+| Custom task     | `python manage.py sort_products -id` |
