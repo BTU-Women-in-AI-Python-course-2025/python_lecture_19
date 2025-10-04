@@ -1,5 +1,3 @@
-# Django REST Framework: Pagination
-
 ## 🔹 What is Pagination?
 
 **Pagination** lets you control how many results are returned in a single API response — useful when working with large datasets.
@@ -76,6 +74,52 @@ REST_FRAMEWORK = {
 
 ---
 
+### 🧩 Example Use Case
+
+`LimitOffsetPagination` is great when you want **direct control** over how many records to skip and how many to retrieve.
+
+For example:
+
+```bash
+GET /products/?limit=3&offset=6
+```
+
+returns products **7, 8, and 9** (because it skips the first 6 items, then returns 3).
+
+---
+
+### ⚙️ Custom Offset Pagination Class
+
+You can also define your own custom offset pagination class, similar to `PageNumberPagination`:
+
+```python
+from rest_framework.pagination import LimitOffsetPagination
+
+class CustomOffsetPagination(LimitOffsetPagination):
+    default_limit = 10                   # Default number of items per page
+    limit_query_param = 'limit'          # Query param to set limit
+    offset_query_param = 'offset'        # Query param to set offset
+    max_limit = 100                      # Maximum allowed limit
+```
+
+Then use it in your viewset:
+
+```python
+class ProductViewSet(viewsets.ModelViewSet):
+    queryset = Product.objects.all()
+    serializer_class = ProductSerializer
+    pagination_class = CustomOffsetPagination
+```
+
+Example requests:
+
+```
+GET /products/?limit=5&offset=0
+GET /products/?limit=10&offset=20
+```
+
+---
+
 ## 3️⃣ `CursorPagination`
 
 Best for real-time data, secure, and resistant to data shifts (e.g. due to inserts/deletes).
@@ -98,6 +142,97 @@ class ProductCursorPagination(CursorPagination):
     page_size = 5
     ordering = '-created_at'
 ```
+
+---
+
+### 🔍 Example API Response
+
+**First request:**
+
+```
+GET /products/
+```
+
+```json
+{
+  "next": "http://localhost:8000/products/?cursor=cD0yMDI1LTEwLTA0KzEzJTNBMzUlM0E1Ni4zOTI3ODclMkIwMCUzQTAw",
+  "previous": null,
+  "results": [
+    {
+      "id": 1,
+      "name": "Laptop",
+      "created_at": "2025-10-04T13:40:00Z"
+    },
+    {
+      "id": 2,
+      "name": "Keyboard",
+      "created_at": "2025-10-04T13:38:00Z"
+    },
+    ...
+  ]
+}
+```
+
+---
+
+### ▶️ What Happens When You Go to the Next Page
+
+When you call:
+
+```
+GET /products/?cursor=cD0yMDI1LTEwLTA0KzEzJTNBMzUlM0E1Ni4zOTI3ODclMkIwMCUzQTAw
+```
+
+Django REST Framework decodes the cursor internally — it represents the **position** of the last item from the previous page.
+
+Example decoded content (conceptually):
+
+```json
+{
+  "position": "2025-10-04T13:35:56.392787+00:00",
+  "reverse": false
+}
+```
+
+Then DRF performs a query like this under the hood:
+
+```python
+Product.objects.filter(created_at__lt="2025-10-04T13:35:56.392787+00:00")
+               .order_by('-created_at')[:5]
+```
+
+This means:
+
+| Step | Action                                                            |
+| ---- | ----------------------------------------------------------------- |
+| 1️⃣  | Select records **older** than the last one from the previous page |
+| 2️⃣  | Keep same ordering (`-created_at`)                                |
+| 3️⃣  | Return the next 5 items                                           |
+| 4️⃣  | Encode a new cursor for the next request                          |
+
+---
+
+### ⏪ When Going to the Previous Page
+
+If you click the `"previous"` link, DRF reverses the logic internally:
+
+```python
+Product.objects.filter(created_at__gt="2025-10-04T13:35:56.392787+00:00")
+               .order_by('created_at')[:5]
+```
+
+Then it reverses the results before sending them back, so the order remains consistent for the client.
+
+---
+
+### ⚙️ Why CursorPagination Is Powerful
+
+| Feature             | Description                                           |
+| ------------------- | ----------------------------------------------------- |
+| **Performance**     | No SQL `OFFSET`, uses indexed lookups instead         |
+| **Consistency**     | Stable pagination even when new rows are inserted     |
+| **Security**        | Cursor is cryptographically signed and base64 encoded |
+| **Direction Aware** | Supports forward and backward navigation              |
 
 ---
 
