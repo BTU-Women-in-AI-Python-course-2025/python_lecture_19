@@ -108,6 +108,7 @@ class ProductViewSet(viewsets.ModelViewSet):
 For more complex filtering (e.g. `price__gt`, date ranges):
 
 ```python
+# Example 1
 import django_filters
 from .models import Product
 
@@ -118,6 +119,37 @@ class ProductFilter(django_filters.FilterSet):
     class Meta:
         model = Product
         fields = ['min_price', 'max_price', 'category']
+```
+
+```python
+# Example 2
+import django_filters
+from django.utils import timezone
+from datetime import timedelta
+from .models import Product
+
+class ProductFilter(django_filters.FilterSet):
+    min_price = django_filters.NumberFilter(field_name="price", lookup_expr='gte')
+    max_price = django_filters.NumberFilter(field_name="price", lookup_expr='lte')
+    keyword = django_filters.CharFilter(method='filter_by_keyword')  # 👈 custom filter
+    recent = django_filters.BooleanFilter(method='filter_recent')   # 👈 boolean custom filter
+
+    class Meta:
+        model = Product
+        fields = ['min_price', 'max_price', 'category', 'keyword', 'recent']
+
+    def filter_by_keyword(self, queryset, name, value):
+        """Filter products by name or description containing keyword."""
+        return queryset.filter(
+            Q(name__icontains=value) | Q(description__icontains=value)
+        )
+
+    def filter_recent(self, queryset, name, value):
+        """Return only products created in the last 7 days if recent=True."""
+        if value:
+            last_week = timezone.now() - timedelta(days=7)
+            return queryset.filter(created_at__gte=last_week)
+        return queryset
 ```
 
 Then in your view:
