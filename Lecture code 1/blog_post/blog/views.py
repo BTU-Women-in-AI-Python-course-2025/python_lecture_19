@@ -2,6 +2,7 @@ from rest_framework import mixins, viewsets, status
 from rest_framework.response import Response
 
 from blog.models import BlogPost, Author
+from blog.pagination import BlogPostPagination, BlogPostLimitOffsetPagination, BlogPostCursorPagination
 from blog.serializers import (
     BlogPostListSerializer,
     BlogPostDetailSerializer,
@@ -13,6 +14,8 @@ class BlogPostListViewSet(mixins.ListModelMixin,
                          viewsets.GenericViewSet):
     queryset = BlogPost.objects.filter(deleted=False)
     serializer_class = BlogPostListSerializer
+    # pagination_class = BlogPostLimitOffsetPagination
+    pagination_class = BlogPostCursorPagination
 
 
 class BlogPostCreateViewSet(mixins.CreateModelMixin,
@@ -41,6 +44,7 @@ class BlogPostDeleteViewSet(mixins.DestroyModelMixin,
 
 class BlogPostViewSet(viewsets.ModelViewSet):
     queryset = BlogPost.objects.filter(deleted=False)
+    pagination_class = BlogPostPagination
 
     def get_serializer_class(self):
         if self.action == 'create' or self.action == 'update':
