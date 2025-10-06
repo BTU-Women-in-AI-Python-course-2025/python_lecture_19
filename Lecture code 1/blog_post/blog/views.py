@@ -1,6 +1,7 @@
 from rest_framework import mixins, viewsets, status
 from rest_framework.response import Response
 
+from blog.filter_set import BlogPostFilter
 from blog.models import BlogPost, Author
 from blog.pagination import BlogPostPagination, BlogPostLimitOffsetPagination, BlogPostCursorPagination
 from blog.serializers import (
@@ -45,6 +46,7 @@ class BlogPostDeleteViewSet(mixins.DestroyModelMixin,
 class BlogPostViewSet(viewsets.ModelViewSet):
     queryset = BlogPost.objects.filter(deleted=False)
     pagination_class = BlogPostPagination
+    filterset_class = BlogPostFilter
 
     def get_serializer_class(self):
         if self.action == 'create' or self.action == 'update':
