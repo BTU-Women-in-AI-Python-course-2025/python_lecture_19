@@ -43,6 +43,7 @@ class BlogPost(models.Model):
     document = models.FileField(upload_to='blog_document/', null=True, blank=True)
     deleted = models.BooleanField(verbose_name='წაშლილია', default=False)
     category = models.IntegerField(choices=BLOG_POST_CATEGORY_CHOICES, verbose_name='Category', null=True)
+    order = models.IntegerField(verbose_name='Order', null=True, blank=True, default=0)
 
     def get_images(self):
         return BlogPostImage.objects.filter(blog_post=self.id)
@@ -54,7 +55,7 @@ class BlogPost(models.Model):
     class Meta:
         verbose_name = "Blog Post"
         verbose_name_plural = "Blog Posts"
-        ordering = ['title']
+        ordering = ['order']
         unique_together = [['title', 'text']]
 
     def __str__(self):

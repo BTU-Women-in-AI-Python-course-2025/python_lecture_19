@@ -10,3 +10,4 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS(
             f"Updated Blog posts: {blog_post_count}"
         ))
+
