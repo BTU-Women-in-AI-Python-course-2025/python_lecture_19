@@ -2,6 +2,7 @@ from rest_framework import mixins, viewsets, status
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from blog.filtersets import BlogPostFilter
 from blog.models import BlogPost, Author
 from blog.pagination import BlogPostPagination, BlogPostOffsetPagination, BlogPostCursorPagination
 from blog.serializers import (
@@ -15,6 +16,8 @@ class BlogPostListViewSet(mixins.ListModelMixin,
     queryset = BlogPost.objects.filter(deleted=False)
     serializer_class = BlogPostListSerializer
     pagination_class = BlogPostPagination
+    # filterset_fields = ['category', 'title']
+    filterset_class = BlogPostFilter
 
 
 class BlogPostDetailViewSet(mixins.RetrieveModelMixin,
@@ -44,7 +47,8 @@ class  BlogPostDeleteViewSet(mixins.DestroyModelMixin,
 class BlogPostViewSet(ModelViewSet):
     queryset = BlogPost.objects.filter(deleted=False)
     # pagination_class = BlogPostOffsetPagination
-    pagination_class = BlogPostCursorPagination
+    # pagination_class = BlogPostCursorPagination
+    filterset_class = BlogPostFilter
 
     def get_serializer_class(self):
         if self.action == 'retrieve':
@@ -55,12 +59,20 @@ class BlogPostViewSet(ModelViewSet):
             return BlogPostListSerializer
 
     def list(self, request, *args, **kwargs):
-        response = super().list(request, *args, **kwargs)
-        response.data = {
-            "total_products": self.get_queryset().count(),
-            "paginated_results": response.data
-        }
-        return response
+        queryset = self.filter_queryset(self.get_queryset())
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response({
+                "total_products": queryset.count(),
+                "paginated_results": serializer.data
+            })
+        # If pagination is not used
+        serializer = self.get_serializer(queryset, many=True)
+        return Response({
+            "total_products": queryset.count(),
+            "paginated_results": serializer.data
+        })
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
