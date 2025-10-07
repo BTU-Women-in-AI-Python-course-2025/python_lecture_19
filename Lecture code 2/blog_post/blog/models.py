@@ -63,6 +63,7 @@ class BlogPost(models.Model):
 
     category = models.IntegerField(verbose_name='Category', choices=CATEGORY_CHOICES, null=True)
     deleted = models.BooleanField(verbose_name="Deleted", default=False)
+    order = models.IntegerField(verbose_name="Order", default=0)
 
     def get_images(self):
         return self.images.all()
@@ -70,7 +71,7 @@ class BlogPost(models.Model):
     class Meta:
         verbose_name = "Blog Post"
         verbose_name_plural = "Blog Posts"
-        ordering = ['title', 'created_at']
+        ordering = ['order']
         unique_together = [['title', 'text']]
 
     def __str__(self):
